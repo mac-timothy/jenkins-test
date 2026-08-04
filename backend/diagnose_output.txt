@@ -1,0 +1,26 @@
+=== ENV VARIABLE PRESENCE ===
+DB_USER present: True  repr='postgres.otwbmiskzvahodggotwb'
+DB_PASSWORD present: True  length=20
+DB_HOST present: True  repr='aws-1-eu-west-2.pooler.supabase.com'
+DB_PORT present: True  repr='5432'
+DB_NAME present: True  repr='postgres'
+
+=== PASSWORD ANALYSIS ===
+Contains URL-special characters (needs encoding): True
+Has leading/trailing whitespace: False
+First char='S'  Last char='1'  Printable alphabet: True
+
+=== URL CONSTRUCTIONS (password masked) ===
+Current raw URL:  postgresql+psycopg2://postgres.otwbmiskzvahodggotwb:***@aws-1-eu-west-2.pooler.supabase.com:5432/postgres?sslmode=require
+URL-encoded URL:  postgresql+psycopg2://postgres.otwbmiskzvahodggotwb:***@aws-1-eu-west-2.pooler.supabase.com:5432/postgres?sslmode=require
+(encoded password would be length 22)
+
+=== CONNECTION TESTS ===
+TEST 1 (raw password, kwarg connect): FAILED -> OperationalError: connection to server at "aws-1-eu-west-2.pooler.supabase.com" (13.41.42.138), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+TEST 2 (URL-encoded password): FAILED -> OperationalError: (psycopg2.OperationalError) connection to server at "aws-1-eu-west-2.pooler.supabase.com" (13.43.174.140), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+TEST 3 (raw URL as in database.py): FAILED -> OperationalError: (psycopg2.OperationalError) connection to server at "aws-1-eu-west-2.pooler.supabase.com" (13.43.174.140), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
