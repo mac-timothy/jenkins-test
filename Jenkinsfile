@@ -8,16 +8,17 @@ pipeline {
     stages {
 
 
-        // =================================================
-        // Stage 1:
-        // Get source code from GitHub
+        // =====================================================
+        // Checkout Source Code
         //
-        // Jenkins automatically checks out the repository
-        // that is configured in the pipeline job.
+        // Downloads the latest application code from GitHub.
         //
-        // =================================================
+        // Jenkins uses the repository configured
+        // in the pipeline job.
+        //
+        // =====================================================
 
-        stage('Checkout') {
+        stage('Checkout Source') {
 
 
             steps {
@@ -37,18 +38,17 @@ pipeline {
 
 
 
-        // =================================================
-        // Stage 2:
-        // Install Python dependencies
+        // =====================================================
+        // Setup Python Environment
         //
         // Jenkins machines are clean environments.
         //
-        // Therefore we install:
+        // This stage:
         //
-        // - Application dependencies
-        // - Testing tools
+        // 1. Creates Python virtual environment
+        // 2. Installs project dependencies
         //
-        // =================================================
+        // =====================================================
 
         stage('Install Dependencies') {
 
@@ -64,7 +64,7 @@ pipeline {
                 cd backend
 
 
-                python3 -m venv venv || true
+                python3 -m venv venv
 
 
                 . venv/bin/activate
@@ -90,25 +90,29 @@ pipeline {
 
 
 
-        // =================================================
-        // Stage 3:
-        // Run automated tests
+        // =====================================================
+        // Execute Automated Tests
         //
-        // This is the most important CI stage.
+        // This is the Continuous Integration step.
         //
         // If tests fail:
         //
-        // Jenkins build becomes FAILED
+        // Jenkins build fails.
         //
-        // =================================================
+        // Reports generated:
+        //
+        // test-results.xml
+        // test-report.html
+        //
+        // =====================================================
 
-        stage('Run Tests') {
+        stage('Run Automated Tests') {
 
 
             steps {
 
 
-                echo 'Running automated tests...'
+                echo 'Running pytest test suite...'
 
 
                 sh '''
@@ -121,11 +125,69 @@ pipeline {
 
 
                 pytest \
-                --junitxml=test-results.xml
-
+                --junitxml=test-results.xml \
+                --html=test-report.html \
+                --self-contained-html
 
 
                 '''
+
+
+            }
+
+        }
+
+
+
+
+
+        // =====================================================
+        // Publish Test Reports
+        //
+        // Displays test results inside Jenkins dashboard.
+        //
+        // Developers can see:
+        //
+        // - Passed tests
+        // - Failed tests
+        // - Error details
+        //
+        // =====================================================
+
+        stage('Publish Reports') {
+
+
+            steps {
+
+
+                echo 'Publishing test reports...'
+
+
+                junit(
+
+                    testResults: 'backend/test-results.xml',
+
+                    allowEmptyResults: true
+
+                )
+
+
+
+                publishHTML([
+
+                    allowMissing: true,
+
+                    alwaysLinkToLastBuild: true,
+
+                    keepAll: true,
+
+                    reportDir: 'backend',
+
+                    reportFiles: 'test-report.html',
+
+                    reportName: 'Pytest HTML Report'
+
+                ])
 
 
             }
@@ -140,82 +202,45 @@ pipeline {
 
 
     // =====================================================
-    // Post actions
+    // Pipeline Result Handling
     //
-    // These execute after the pipeline finishes.
+    // Runs after every build.
     //
     // =====================================================
 
     post {
 
 
-        always {
-
-
-            echo 'Publishing test reports...'
-
-
-
-            // Jenkins reads this file
-            // and displays test results.
-
-            junit(
-
-                testResults: 'backend/test-results.xml',
-
-                allowEmptyResults: true
-
-            )
-
-
-
-            // Publish pytest HTML report
-
-            publishHTML([
-
-                allowMissing: true,
-
-                alwaysLinkToLastBuild: true,
-
-                keepAll: true,
-
-                reportDir: 'backend',
-
-                reportFiles: 'test-report.html',
-
-                reportName: 'Pytest HTML Report'
-
-            ])
-
-
-
-        }
-
-
-
-
-
         success {
 
 
-            echo 'BUILD SUCCESS - All tests passed'
+            echo 'BUILD SUCCESS - All tests passed.'
 
 
         }
-
-
 
 
 
         failure {
 
 
-            echo 'BUILD FAILED - Tests failed'
+            echo 'BUILD FAILED - Check test failures.'
+
+
+        }
+
+
+
+        always {
+
+
+            echo 'Pipeline execution completed.'
 
 
         }
 
 
     }
+
 
 }
