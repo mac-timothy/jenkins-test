@@ -361,12 +361,7 @@ pipeline {
                 echo "================================"
 
 
-
-                pytest --junitxml=test-results.xml \
-
-                --html=test-report.html \
-
-                --self-contained-html
+            pytest --junitxml=test-results.xml --html=test-report.html --self-contained-html
 
 
 
