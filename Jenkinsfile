@@ -362,9 +362,7 @@ pipeline {
 
 
 
-                pytest \
-
-                --junitxml=test-results.xml \
+                pytest --junitxml=test-results.xml \
 
                 --html=test-report.html \
 
