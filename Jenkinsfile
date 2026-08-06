@@ -59,15 +59,31 @@ pipeline {
 
     Defines where this pipeline will execute.
 
-    "any" means Jenkins can run this job on any available worker node.
-
-    In our case:
-        Jenkins Docker container
-
     ================================================================
     */
 
     agent any
+
+
+
+    /*
+    ================================================================
+    Pipeline Options
+
+    Prevent Jenkins from automatically checking out code twice.
+
+    Checkout is handled manually using:
+
+        checkout scm
+
+    ================================================================
+    */
+
+    options {
+
+        skipDefaultCheckout(true)
+
+    }
 
 
 
@@ -76,43 +92,22 @@ pipeline {
     ================================================================
     Environment Configuration
 
-    Environment variables are available to all pipeline stages.
+    Jenkins test environment.
 
-    The application database configuration checks:
-
-        ENVIRONMENT=test
-
-
-    When this value exists:
-
-        database.py
-
-    loads:
+    This tells the application to load:
 
         .env.test
-
 
     instead of:
 
         .env
 
-
-    This ensures Jenkins tests use the testing database
-    and never touch production data.
-
-
-    Later, database credentials will be moved into Jenkins
-    Credentials Manager instead of files.
-
     ================================================================
     */
 
-
     environment {
 
-
         ENVIRONMENT = "test"
-
 
     }
 
@@ -127,28 +122,8 @@ pipeline {
         /*
         ============================================================
         Stage 1: Checkout Source Code
-
-        Purpose:
-
-            Download the latest source code from GitHub.
-
-
-        Jenkins performs:
-
-            Git clone / Git fetch
-                    |
-                    v
-            Checkout selected branch
-
-
-        Example:
-
-            mac branch
-
-
         ============================================================
         */
-
 
         stage('Checkout Source') {
 
@@ -163,17 +138,13 @@ pipeline {
                 /*
                 checkout scm
 
-                Uses the Git repository configured
-                inside the Jenkins pipeline job.
+                Jenkins uses configured:
 
-                Jenkins automatically knows:
-
-                    - repository URL
-                    - credentials
-                    - branch
+                    - Repository URL
+                    - Credentials
+                    - Branch
 
                 */
-
 
                 checkout scm
 
@@ -187,35 +158,23 @@ pipeline {
 
 
 
-
         /*
         ============================================================
         Stage 2: Install Dependencies
 
-
         Purpose:
 
-            Prepare a clean Python environment.
+            Create Python environment and install packages.
 
-
-        Jenkins containers are temporary environments.
-
-        They do not contain:
-
-            - project packages
-            - virtual environments
-            - pytest
-
-
-        This stage creates:
+        Creates:
 
             backend/venv
 
-
-        Then installs:
+        Installs:
 
             requirements.txt
-
+            pytest
+            pytest-html
 
         ============================================================
         */
@@ -233,50 +192,61 @@ pipeline {
 
                 sh '''
 
+                set -e
 
-                # Move into backend application folder
 
                 cd backend
 
 
 
-                # Create isolated Python environment
+                echo "Checking Python version..."
 
-                python3 -m venv venv
+                python3 --version
 
 
 
-                # Activate virtual environment
+                echo "Creating virtual environment..."
+
+                if [ ! -d "venv" ]; then
+
+                    python3 -m venv venv
+
+                fi
+
+
+
+                echo "Activating virtual environment..."
 
                 . venv/bin/activate
 
 
 
-                # Upgrade package manager
+                echo "Upgrading pip..."
 
                 pip install --upgrade pip
 
 
 
-                # Install application dependencies
+                echo "Installing application dependencies..."
 
                 pip install -r requirements.txt
 
 
 
-                # Install testing tools
+                echo "Installing testing tools..."
 
                 pip install pytest pytest-cov pytest-html
 
 
 
-                '''
+                echo "Dependencies installed successfully."
 
+
+                '''
 
             }
 
         }
-
 
 
 
@@ -291,42 +261,25 @@ pipeline {
 
         Purpose:
 
-            Execute the application's automated tests.
+            Execute automated tests using pytest.
 
 
-        Testing framework:
-
-            pytest
-
-
-        Generated reports:
+        Reports generated:
 
 
             test-results.xml
 
-                Used by Jenkins to display test results.
+                Jenkins JUnit report
 
 
             test-report.html
 
-                Human-friendly HTML test report.
-
-
-        Build behaviour:
-
-
-            Test passes:
-
-                Pipeline continues.
-
-
-            Test fails:
-
-                Pipeline stops and build fails.
+                Browser HTML report
 
 
         ============================================================
         */
+
 
         stage('Run Automated Tests') {
 
@@ -340,37 +293,80 @@ pipeline {
 
                 sh '''
 
+                set -e
 
 
-                # Enter backend directory
 
                 cd backend
 
 
 
-                # Activate Python environment
+                echo "Activating virtual environment..."
 
                 . venv/bin/activate
 
 
 
-                # Diagnostic check
+
+                echo "================================"
+
+                echo "Environment Information"
+
+                echo "================================"
+
+
 
                 echo "ENVIRONMENT=$ENVIRONMENT"
 
 
 
-                # Execute tests
 
-                pytest \\
-                --junitxml=test-results.xml \\
-                --html=test-report.html \\
+                echo "================================"
+
+                echo "Checking backend files"
+
+                echo "================================"
+
+
+
+                ls -la
+
+
+
+
+                echo "================================"
+
+                echo "Checking environment files"
+
+                echo "================================"
+
+
+
+                ls -la .env* || true
+
+
+
+
+
+                echo "================================"
+
+                echo "Executing pytest"
+
+                echo "================================"
+
+
+
+                pytest \
+
+                --junitxml=test-results.xml \
+
+                --html=test-report.html \
+
                 --self-contained-html
 
 
 
                 '''
-
 
             }
 
@@ -387,29 +383,11 @@ pipeline {
         Stage 4: Publish Test Reports
 
 
-        Purpose:
+        Jenkins displays:
 
-
-            Display test information inside Jenkins.
-
-
-        Jenkins will show:
-
-
-            - Number of tests executed
             - Passed tests
             - Failed tests
             - Error details
-
-
-        Reports:
-
-            JUnit XML
-                Jenkins native test reporting
-
-
-            HTML Report
-                Detailed browser report
 
 
         ============================================================
@@ -426,44 +404,16 @@ pipeline {
 
 
 
-                /*
-                Publish JUnit test results
-
-                Jenkins understands XML format
-                and creates the Test Result dashboard.
-
-                */
-
-
                 junit(
-
 
                     testResults: 'backend/test-results.xml',
 
-
                     allowEmptyResults: true
-
 
                 )
 
 
 
-
-
-
-                /*
-                Publish HTML report
-
-
-                Creates a link in Jenkins:
-
-                    Pytest HTML Report
-
-
-                Developers can open it
-                and inspect failures.
-
-                */
 
 
                 publishHTML([
@@ -491,8 +441,24 @@ pipeline {
 
 
 
-            }
 
+
+
+                /*
+                Keep reports attached to Jenkins build.
+
+                */
+
+                archiveArtifacts(
+
+                    artifacts: 'backend/test-report.html, backend/test-results.xml',
+
+                    allowEmptyArchive: true
+
+                )
+
+
+            }
 
         }
 
@@ -510,12 +476,7 @@ pipeline {
     ================================================================
     Post Build Actions
 
-
-    Runs after the pipeline finishes.
-
-    Jenkins executes these blocks depending
-    on the final build result.
-
+    Executes after pipeline completion.
 
     ================================================================
     */
@@ -523,12 +484,6 @@ pipeline {
 
     post {
 
-
-
-        /*
-        Runs when every test passes.
-
-        */
 
 
         success {
@@ -542,19 +497,6 @@ pipeline {
 
 
 
-        /*
-        Runs when something fails.
-
-        Possible causes:
-
-            - dependency installation failure
-            - test failure
-            - application error
-
-
-        */
-
-
         failure {
 
 
@@ -565,18 +507,6 @@ pipeline {
 
 
 
-
-
-        /*
-        Always executes regardless of result.
-
-        Useful for:
-
-            - cleanup
-            - notifications
-            - logging
-
-        */
 
 
         always {
