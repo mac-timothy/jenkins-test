@@ -328,7 +328,6 @@ pipeline {
         ============================================================
         */
 
-
         stage('Run Automated Tests') {
 
 
@@ -355,6 +354,12 @@ pipeline {
 
 
 
+                # Diagnostic check
+
+                echo "ENVIRONMENT=$ENVIRONMENT"
+
+
+
                 # Execute tests
 
                 pytest \\
@@ -370,8 +375,6 @@ pipeline {
             }
 
         }
-
-
 
 
 
