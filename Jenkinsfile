@@ -107,9 +107,15 @@ pipeline {
 
     environment {
 
-        ENVIRONMENT = "test"
+    ENVIRONMENT = "test"
 
-    }
+    TEST_DB_USER = credentials('test-db-user')
+    TEST_DB_PASSWORD = credentials('test-db-password')
+    TEST_DB_HOST = credentials('test-db-host')
+    TEST_DB_PORT = credentials('test-db-port')
+    TEST_DB_NAME = credentials('test-db-name')
+
+}
 
 
 
