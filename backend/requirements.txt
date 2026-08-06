@@ -34,4 +34,4 @@ swagger_ui_bundle==1.1.0
 typing-inspection==0.4.2
 typing_extensions==4.16.0
 uvicorn==0.52.1
-bcrypt==5.0.0
+bcrypt==4.1.3
