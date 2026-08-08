@@ -1,0 +1,214 @@
+services:
+
+  # ==========================================================
+  # BACKEND SERVICE
+  # ==========================================================
+  # FastAPI ecommerce application.
+  #
+  # Responsibilities:
+  # - Handles API requests
+  # - Authentication
+  # - Products
+  # - Orders
+  # - Business logic
+  #
+  # Built from:
+  # backend/Dockerfile
+  # ==========================================================
+
+  backend:
+
+    # Docker image created from our FastAPI Dockerfile
+    image: jenkins-test-backend:latest
+
+    # Name of the running backend container
+    container_name: ecommerce-backend
+
+
+    # Build configuration
+    # This allows Docker Compose to rebuild the image
+    # when the application code changes.
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+
+
+    # Expose FastAPI application
+    #
+    # Host machine:8000
+    #        |
+    #        |
+    # Container:8000
+    #
+    ports:
+      - "8000:8000"
+
+
+    # Load application configuration
+    # Contains:
+    # - Database credentials
+    # - Environment settings
+    #
+    env_file:
+      - ./backend/.env
+
+
+    # Controls startup order
+    #
+    # Backend requires:
+    # 1. PostgreSQL database
+    # 2. Redis cache
+    #
+    depends_on:
+      - postgres
+      - redis
+
+
+    # Automatically restart backend
+    # if it crashes or Docker restarts.
+    restart: unless-stopped
+
+
+
+
+  # ==========================================================
+  # POSTGRESQL DATABASE SERVICE
+  # ==========================================================
+  #
+  # Main ecommerce database.
+  #
+  # Stores:
+  # - Users
+  # - Products
+  # - Orders
+  # - Payments
+  # - Inventory
+  #
+  # PostgreSQL replaces external database
+  # during local/self-hosted deployment.
+  #
+  # ==========================================================
+
+  postgres:
+
+    # Official lightweight PostgreSQL image
+    image: postgres:15-alpine
+
+
+    # Database container name
+    container_name: ecommerce-postgres
+
+
+    # Initial database configuration
+    #
+    # These values create the database
+    # on the first startup.
+    environment:
+
+      # Database administrator username
+      POSTGRES_USER: ecommerce_user
+
+      # Database password
+      POSTGRES_PASSWORD: ecommerce_password
+
+      # Ecommerce application database
+      POSTGRES_DB: ecommerce_db
+
+
+    # Database port
+    #
+    # Host:5432
+    # Container:5432
+    #
+    ports:
+      - "5432:5432"
+
+
+    # Persistent database storage
+    #
+    # Without this:
+    # deleting the container deletes data.
+    #
+    # With this:
+    # database data survives restarts.
+    #
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+
+    # Keep database running
+    restart: unless-stopped
+
+
+
+
+  # ==========================================================
+  # REDIS CACHE SERVICE
+  # ==========================================================
+  #
+  # Redis is an in-memory data store.
+  #
+  # Ecommerce uses Redis for:
+  #
+  # - Shopping carts
+  # - User sessions
+  # - API caching
+  # - Background job queues
+  # - Rate limiting
+  #
+  # ==========================================================
+
+  redis:
+
+    # Official Redis lightweight image
+    image: redis:7-alpine
+
+
+    # Redis container name
+    container_name: ecommerce-redis
+
+
+    # Redis default port
+    #
+    # Host:6379
+    # Container:6379
+    #
+    ports:
+      - "6379:6379"
+
+
+    # Persist Redis data
+    #
+    # Useful for:
+    # - queues
+    # - cached sessions
+    #
+    volumes:
+      - redis_data:/data
+
+
+    restart: unless-stopped
+
+
+
+
+# ==========================================================
+# DOCKER VOLUMES
+# ==========================================================
+#
+# Volumes store permanent data outside containers.
+#
+# Container deleted?
+# Data remains.
+#
+# ==========================================================
+
+volumes:
+
+
+  # PostgreSQL persistent storage
+  postgres_data:
+
+
+  # Redis persistent storage
+  redis_data:
